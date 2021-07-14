@@ -145,9 +145,9 @@ async function handler (req, res)
 
 	let {pathname, query} = url.parse(req.url, true);
 	
-	// remove worshipchords at the beginning and the slash following it (if there is a slash)
+	// remove directory name from the full path
 	let path = pathname;
-	path = path.replace(/\/worshipchords\/*/,'')
+	path = path.replace(RegExp(`^${config.directory}/?`),'')
 	
 	// remove trailing slash
 	path = decodeURI(path.replace(/\/$/,''))
