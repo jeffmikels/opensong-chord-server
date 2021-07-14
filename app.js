@@ -94,6 +94,11 @@ wss.on('connection', function connection(ws) {
 });
 
 
+// PRIME THE SETLIST CACHE
+primeSetlistCache()
+setInterval(primeSetlistCache, 1000*60*60*24) // every day
+
+
 /* INITIALIZE AND START THE SOCKET.IO LISTENER */
 Log('---------- SERVER STARTING --------------')
 Log(':: ' + Date())
@@ -112,16 +117,19 @@ app.listen(LISTEN_PORT);
 /static          => serves static files from the static subdirectory
 /Sets            => serves list of Setlists
 /Sets/NAME       => serves data for Setlist identified by NAME
+/Sets/--today--  => will replace --today-- with today's date YYYY-MM-DD before making request
+/Sets/--latest-- => will serve the most recent setlist (see implementation below for notes on caching)
 /Songs           => serves list of Songs [ BROKEN ]
 
 QUERY VARIABLES
 ?usecache=1      => will use the most recently cached data for a request
-?filter=a,b,...  => will filter the results, multiple filters with comma
+?filter=a,b,...  => will filter the results, multiple filters with comma (applied in order)
 
 SONG FILTERS:
 pre-alternates   => ignores all songs following a song with ALTERNATES in the title
-ccli-only        => ignores all songs without ccli data
+no-duplicates    => includes only the first instance of a song in a setlist (based on title)
 no-lyrics        => strips lyrics data from songs before returning
+ccli-only        => ignores all songs without ccli data
 
 SET FILTERS:
 text             => includes sets where the title contains text (case insensitive)
@@ -131,12 +139,11 @@ text             => includes sets where the title contains text (case insensitiv
 */
 async function handler (req, res)
 {
-	res.setHeader('Access-Control-Allow-Origin', 'https://lafayettecc.org');
+	// res.setHeader('Access-Control-Allow-Origin', 'https://lafayettecc.org');
+	res.setHeader('Access-Control-Allow-Origin', '*');
 	res.setHeader('Access-Control-Allow-Credentials', 'true');
 
 	let {pathname, query} = url.parse(req.url, true);
-	Log(pathname);
-	Log('QUERY: ' + JSON.stringify(query));
 	
 	// remove worshipchords at the beginning and the slash following it (if there is a slash)
 	let path = pathname;
@@ -144,7 +151,10 @@ async function handler (req, res)
 	
 	// remove trailing slash
 	path = decodeURI(path.replace(/\/$/,''))
-	Log(`REQUESTED PATH: ${path}`);
+
+	Log('=========== NEW REQUEST ===========')
+	Log('PATH: ' + path)
+	Log('QUERY: ' + JSON.stringify(query));
 	
 	if (path == '' || path == 'index.html') {
 		Log('sending index.html');
@@ -187,23 +197,71 @@ async function handler (req, res)
 	
 	try {
 		let data
+		
+		// TWO SPECIAL REWRITES ARE AVAILABLE :: --today-- and --latest--
+		
+		// allow user to request --today-- for a setlist labeled by today's date
+		// this rewrite happens before the cache is checked
+		if (path == 'Sets/--today--') {
+			let now = new Date();
+			let year = now.getFullYear()
+			let month = (1 + now.getMonth()).toString().padStart(2,'0')
+			let day = now.getDate().toString().padStart(2,'0')
+			path = `Sets/${year}-${month}-${day}`
+			Log('REWRITE Sets/--today-- TO: ' + path)
+		}
+		
+		// allow user to request --latest-- for the most recent setlist
+		// first, it gets the list of setlists, and then grabs the most recent one
+		// note, since this requires two requests it has caching problems
+		// if usecache is set, it will attempt to use the cache for each request
+		if (path == 'Sets/--latest--') {
+			let setsdata
+			if (query.usecache && 'Sets' in cache) { setsdata = JSON.parse(cache['Sets']); }
+			else {
+				setsdata = await handlePath('Sets');
+				cache['Sets'] = JSON.stringify(setsdata)
+			}
+			if (setsdata.code == 200) {
+				path = setsdata.data.files[0].path;
+			} else {
+				res.writeHead(404);
+				return res.end(JSON.stringify({code: 404, err: 'could not load latest setlist', data: {}}));
+			}
+			Log('REWRITE Sets/--latest-- TO: ' + path)
+		}
+		
+
 		if (query.usecache && path in cache) {
 			Log('using data from cache');
-			data = cache[path];
+			data = JSON.parse(cache[path]);
 		}
 		else {
 			Log('getting new data for path')
+			let cache_latest = false;
+			
 			data = await handlePath(path);
-			cache[path] = data;
+			
+			// store a copy of the data in the cache
+			// because the filters will later change
+			// the data object
+			cache[path] = JSON.stringify(data);
 		}
 		
-		if (query.filter) data.data = dataFilter(data.data, query.filter)
-
+		if (query.filter) data.data = dataFilter(data.data, query.filter);
+		
 		res.writeHead(data.code);
 		return res.end(JSON.stringify(data.data))
 	} catch (e) {
-		res.end();
+		res.writeHead(500);
+		return res.end(JSON.stringify({code: 500, err: 'unknown server error for path ' + path, data: {}}));
 	}
+}
+
+
+async function primeSetlistCache() {
+	setsdata = await handlePath('Sets');
+	cache['Sets'] = JSON.stringify(setsdata)
 }
 
 function dataFilter(data, filters) {
@@ -228,8 +286,9 @@ function dataFilter(data, filters) {
 				case 'ccli-only':
 					Log('FILTER: ccli-only ... keeping only songs with CCLI data')
 					filtered = []
+					ccli:
 					for (let song of data.songs) {
-						if (song.ccli == '') continue;
+						if (song.ccli == '') continue ccli;
 						filtered.push(song)
 					}
 					data.songs = filtered;
@@ -240,6 +299,18 @@ function dataFilter(data, filters) {
 					for (let song of data.songs) {
 						delete song.lyrics;
 						filtered.push(song)
+					}
+					data.songs = filtered;
+					break;
+				case 'no-duplicates':
+					Log('FILTER: no-duplicates ... includes the first instance of each song')
+					filtered = []
+					seen = []
+					for (let song of data.songs) {
+						if (!seen.includes(song.title)) {
+							filtered.push(song)
+							seen.push(song.title)
+						}
 					}
 					data.songs = filtered;
 					break;
@@ -280,8 +351,16 @@ function dataFilter(data, filters) {
 async function handlePath(path) {
 	Log('Attempting to get requested file');
 	let data;
-	if (config.usedav) data = handleDav(path);
-	else data = handleLocal(path);
+	if (config.usedav) data = await handleDav(path);
+	else data = await handleLocal(path);
+
+	if ('songs' in data.data) {
+		for (let song of data.data.songs) {
+			song['formatted-ccli'] = song.ccli == '' ? '' : `CCLI #${song.ccli}`
+			song['formatted-copyright'] = song.copyright == '' ? '' : `Copyright ${song.copyright}`
+		}
+	}
+	
 	return data;
 }
 
