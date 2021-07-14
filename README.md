@@ -1,12 +1,17 @@
 # opensong-chord-server
 
-This application expects to be served from a subdirectory called /worshipchords/
+This applicaton will take the data files from an OpenSong data directory and serve them to http clients.
+
+It includes a basic interface to be used for displaying chords and lyrics to musicians on a tablet, phone, or computer.
+
+It can access OpenSong files from the local filesystem or over WebDAV connection.
 
 ## installation
 
 ```
 $ git clone https://github.com/jeffmikels/opensong-chord-server.git
 $ cd opensong-chord-server
+$ npm install
 $ cp conf.example.js conf.js
 ```
 
