@@ -144,8 +144,8 @@
 		button:focus {outline:none;}
 		button.dense {padding: 5px 5px;}
 
-		#buttons {position:fixed;bottom:0;right:0;font-size:14px;font-weight:900;}
-		#buttons button {padding: 5px 10px;}
+		#buttons {display:flex;justify-content:flex-end;position:fixed;bottom:0;right:0;left:0;text-align:right;background:black;height:24px;}
+		#buttons button {padding: 0px 10px;font-size:12px;font-weight:900;}
 		
 		#nav-buttons button {cursor:pointer;font-size:50px;font-weight:700;color:rgba(255,255,255,.1);background:none;border:none;outline:none;}
 		#nav-buttons button.prev {position:fixed;left:0;top:50%;}
@@ -223,7 +223,7 @@
 				<button v-if="theme == 'light'" @click="theme = 'dark'">DARK</button>
 				<button v-if="theme == 'dark'" @click="theme = 'light'">LIGHT</button>
 				<button :class="{active:showchords}" @click="showchords = ! showchords">chords</button>
-				<button class="dense" style="" @click="showcomments = !showcomments">NOTES</button>
+				<button :class="{active:showcomments}" class="dense" @click="showcomments = !showcomments">NOTES</button>
 				<button @click="addColumn(1)">{{col_btn_label}}</button>
 				<!-- <button class="dense" @click="fontSize = 18">FONT</button> -->
 				<button class="dense" style="width:38px" @click="fontUp()">A+</button>
@@ -857,9 +857,11 @@
 				save() {
 					// general settings
 					let settings = {
-						fontSize: this.fontSize,
+						theme: this.theme,
 						showchords: this.showchords,
+						showcomments: this.showcomments,
 						columns: this.columns,
+						fontSize: this.fontSize,
 						nashville: this.nashville,
 					}
 					localStorage.setItem('settings', JSON.stringify(settings));
@@ -880,7 +882,55 @@
 					}
 					
 				},
+				
+				// this function looks first in localstorage for saved settings
+				// if there are none, it looks in the query variables to see
+				// if defaults have been specified
 				loadSettings() {
+					// setup defaults
+					let defaults = {
+						showall: false,
+						allownav: true,
+						theme: 'dark',
+						showchords: true,
+						showcomments: true,
+						columns: false,
+						fontSize:12,
+						nashville: false,
+					}
+					
+					// update defaults from query variables
+					let m = window.location.search.match(/settings=([^&=]+)/);
+					if (m) {
+						let settings = m[1].split(',')
+						for (let s of settings) {
+							switch (s) {
+								case 'nochords':
+									defaults.showchords = false;
+									break;
+								case 'showall':
+									defaults.showall = true;
+									break;
+								case 'onecolumn':
+									defaults.columns = false;
+								case 'nonav':
+									defaults.showall = true;
+									defaults.allownav = false;
+									break;
+								case 'nocomments':
+									defaults.showcomments = false;
+									break;
+								case 'light':
+									defaults.theme = 'light'
+									break;
+								case 'dark':
+									defaults.theme = 'dark'
+									break;
+							}
+						}
+					}
+					
+					// update defaults from localStorage
 					let res = localStorage.getItem('settings');
 					if (res) {
 						try {
@@ -888,42 +938,39 @@
 						} catch (e) {
 							return;
 						}
-						this.fontSize = res.fontSize ? res.fontSize : this.fontSize;
-						this.showchords = res.showchords ? res.showchords : this.showchords;
-						this.columns = res.columns ? res.columns : this.columns;
-						this.nashville = res.nashville ? res.nashville : this.nashville;
+						
+						// never save the showall or allownav settings
+						defaults.theme = res.theme ? res.theme : defaults.theme;
+						defaults.showchords = res.showchords ? res.showchords : defaults.showchords;
+						defaults.showcomments = res.showcomments ? res.showcomments : defaults.showcomments;
+						defaults.columns = res.columns ? res.columns : defaults.columns;
+						if (defaults.columns == 1) defaults.columns = false;
+						defaults.fontSize = res.fontSize ? res.fontSize : defaults.fontSize;
+						defaults.nashville = res.nashville ? res.nashville : defaults.nashville;
 					}
+					
+					// finalize settings
+					this.allownav = defaults.allownav;
+					this.showall = defaults.showall;
+					this.theme = defaults.theme;
+					this.showchords = defaults.showchords;
+					this.showcomments = defaults.showcomments;
+					this.columns = defaults.columns;
+					this.fontSize = defaults.fontSize;
+					this.nashville = defaults.nashville;
+					
+					this.save();
 				},
+				
+				// hash check is used for location settings only
 				hashCheck() {
 					if (window.location.hash.length > 1) {
 						let hashdata = window.location.hash.replace('#','').split(',')
+						console.log(hashdata)
 						let set_name = hashdata.shift();
 						let song_index = 0;
-						for (let v of hashdata) {
-							switch (v) {
-								case 'nochords':
-									this.showchords = false;
-									break;
-								case 'showall':
-									this.showall = true;
-									break;
-								case 'nonav':
-									this.showall = true;
-									this.allownav = false;
-									break;
-								case 'nocomments':
-									this.showcomments = false;
-									break;
-								case 'light':
-									this.theme = 'light'
-									break;
-								case 'dark':
-									this.theme = 'dark'
-									break;
-								default:
-									song_index = parseInt(v) - 1; // hash indices are 1-based
-							}
-						}
+						if (hashdata.length > 0) song_index = parseInt(hashdata[0]) - 1
+						this.save();
 						this.getSet(set_name, song_index);
 					}
 					else {
@@ -941,10 +988,13 @@
 				}
 			},
 			created: function(){
+				// these are immediate
 				this.loadSettings();
+
+				// prepare the sets
 				this.getSets();
-				
 				this.hashCheck();
+				
 				window.devel = false;
 				window.addEventListener('popstate', (e)=>{this.current_set = false});
 				
