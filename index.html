@@ -173,7 +173,7 @@
 		<div id="debug">{{debug}}</div>
 		<ul v-if="!current_set" id="setlist">
 			<h3>Choose A Set</h3>
-			<li v-for="set in sets" @click="selectSet(set.name)">
+			<li v-for="set in sets" @click="selectSet(set.path)">
 				<span class="time">({{set.time|niceTime}})</span><br />
 				<span class="name">{{set.name}}</span>
 			</li>
@@ -557,8 +557,8 @@
 					if (n < 0) n = 0;
 					if (n < this.current_set.songs.length) {
 						this.current_song_index = n;
-						let set_name = this.current_set.name;
-						window.history.replaceState(set_name, set_name,`#${encodeURI(set_name)},${n+1}`);
+						let set_path = this.current_set.path;
+						window.history.replaceState(set_path, set_path,`#${encodeURI(set_path)},${n+1}`);
 						this.renotify();
 					}
 				},
@@ -593,12 +593,12 @@
 					this.getSets();
 					window.history.pushState('','','#');
 				},
-				selectSet(set_name) {
-					window.history.pushState(set_name,set_name,`#${encodeURI(set_name)}`);
-					this.getSet(set_name);
+				selectSet(set_path) {
+					window.history.pushState(set_path,set_path,`#${encodeURI(set_path)}`);
+					this.getSet(set_path);
 				},
-				getSet(set_name, song_index = 0) {
-					let url = `${endpoint}/Sets/${set_name}`;
+				getSet(set_path, song_index = 0) {
+					let url = `${endpoint}/${set_path}`;
 					this.debug = 'loading';
 					axios.get(url)
 					.then((res)=>{

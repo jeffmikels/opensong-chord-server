@@ -256,19 +256,27 @@ class PlanningCenter {
 		return song;
 	}
 
-	async setFromPlan( plan ) {
-		if ( !plan.items ) await this.populatePlanItems( plan );
-
-		let items = plan.items;
+	makePlanTitle( plan ) {
 		let title_items = [];
 		if ( plan.attributes.series_title != null ) title_items.push( plan.attributes.series_title );
 		if ( plan.attributes.title != null ) title_items.push( plan.attributes.title );
 		if ( title_items.length == 0 ) title_items.push( plan.id );
-		let title = title_items.join( ': ' );
+		return title_items.join( ': ' );
+	}
+
+	makePlanPath( plan ) {
+		let serviceTypeId = plan.relationships.service_type.data.id
+		return `Sets/${serviceTypeId}/${plan.id}`
+	}
+
+	async setFromPlan( plan ) {
+		if ( !plan.items ) await this.populatePlanItems( plan );
+
+		let items = plan.items;
+		let title = this.makePlanTitle( plan )
 
 		// console.log( `PROCESSING PLAN: ${title} with ${items.length} items` );
-		let serviceTypeId = plan.relationships.service_type.data.id
-		let path = `Sets/${serviceTypeId}/${plan.id}`
+		let path = this.makePlanPath( plan );
 		let name = title;
 
 		// songs should return the same data as the opensong module
@@ -288,16 +296,26 @@ class PlanningCenter {
 	}
 
 	// should return an object that matches what opensong returns
-	// path, name, songs[]
-	async getSetsForFrontend() {
-		let retval = [];
+	// root, dirs[], files[]
+	// where each "file" is an object with {path, name, time}
+	async getSets() {
+		let root = '/Sets'
+		let dirs = [];
+		let files = [];
 		let plans = await this.findPlans( {} );
 		for ( let plan of plans ) {
-			let { path, name, songs } = await this.setFromPlan( plan );
-			if ( songs.length == 0 ) continue;
-			retval.push( { path, name, songs } )
+			if ( plan.attributes.items_count == 0 ) continue;
+
+			let dirpath = `Sets/${plan.relationships.service_type.data.id}`
+			let filepath = `${dirpath}/${plan.id}`
+			dirs.push( dirpath );
+			files.push( {
+				path: filepath,
+				name: this.makePlanTitle( plan ),
+				time: Date.parse( plan.attributes.sort_date )
+			} );
 		}
-		return retval;
+		return { root, dirs, files };
 	}
 
 	// should return an object that matches what opensong returns
@@ -340,7 +358,7 @@ class PlanningCenter {
 		try {
 			let data;
 			if ( path.match( /^Sets\/?$/ ) ) {
-				data = await this.getSetsForFrontend();
+				data = await this.getSets();
 			} else if ( path.match( /^Sets\/.+\/.+$/ ) ) {
 				let [ _, serviceTypeId, planId ] = path.split( '/' );
 				data = await this.loadSet( { serviceTypeId, planId } );

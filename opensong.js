@@ -338,6 +338,7 @@ class OpenSong {
 	}
 
 	// path must be relative to the config.path
+	// returns {path, name, songs[]}
 	async loadSet( path ) {
 		if ( !path.startsWith( 'Sets/' ) ) path = 'Sets/' + path;
 		console.log( `Loading set at path: ${path}` );
