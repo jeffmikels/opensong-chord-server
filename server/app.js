@@ -157,7 +157,7 @@ async function handler( req, res ) {
 
 	if ( path == '' || path == '/' || path == 'index.html' ) {
 		Log( 'sending index.html' );
-		fs.readFile( __dirname + '/index.html', { encoding: 'utf-8' }, function ( err, data ) {
+		fs.readFile( __dirname + '/../index.html', { encoding: 'utf-8' }, function ( err, data ) {
 			if ( err ) {
 				res.writeHead( 404 )
 				return res.end( JSON.stringify( err ) )
@@ -177,7 +177,7 @@ async function handler( req, res ) {
 
 	if ( path.match( /static\/.*\.js/ ) ) {
 		console.log( 'attempting to serve a static js file' )
-		let realpath = __dirname + '/' + path;
+		let realpath = __dirname + '/../' + path;
 		console.log( realpath );
 		fs.readFile( realpath, { encoding: 'utf-8' }, function ( err, data ) {
 			if ( err ) {
@@ -194,7 +194,7 @@ async function handler( req, res ) {
 
 	// is this click.wav
 	if ( path.match( /static\/click\.wav/ ) ) {
-		let realpath = __dirname + '/' + path;
+		let realpath = __dirname + '/../' + path;
 		console.log( realpath );
 		let fstream = fs.createReadStream( realpath );
 		res.statusCode = '200';
