@@ -319,8 +319,7 @@ class OpenSong {
 
 	async getSets() {
 		// { root: path, dirs: [], files: [] };
-		let { files } = await this.client.walk( 'Sets' );
-		return files;
+		return await this.client.walk( 'Sets' );
 	}
 
 	async getSongs() {
