@@ -1,10 +1,14 @@
 # opensong-chord-server
 
-This applicaton will take the data files from an OpenSong data directory and serve them to http clients.
+This applicaton will take the data files from an OpenSong data directory and serve them to http clients
 
 It includes a basic interface to be used for displaying chords and lyrics to musicians on a tablet, phone, or computer.
 
 It can access OpenSong files from the local filesystem or over WebDAV connection.
+
+## Planning Center Online Support (beta)
+
+Support is currently being added for serving songs and chord charts from Planning Center Services. Planning Center support is currently considered beta. You will need an app id and secret from the Planning Center developer portal to use this with Planning Center.
 
 ## installation
 
