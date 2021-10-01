@@ -6,7 +6,7 @@ After=network.target
 # Environment=NODE_PORT=3001
 Type=simple
 User=lcc_web
-ExecStart=/home/lcc_web/web_apps/worshipchords/start.sh
+ExecStart=/home/lcc_web/web_apps/worshipchords/server/start.sh
 Restart=always
 
 [Install]
