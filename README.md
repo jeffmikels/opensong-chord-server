@@ -1,6 +1,6 @@
 # opensong-chord-server
 
-This applicaton will take the data files from an OpenSong data directory and serve them to http clients
+This applicaton will take the data files from an OpenSong data directory and serve them to http clients.
 
 It includes a basic interface to be used for displaying chords and lyrics to musicians on a tablet, phone, or computer.
 
