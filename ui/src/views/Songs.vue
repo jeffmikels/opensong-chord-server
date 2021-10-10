@@ -1,6 +1,6 @@
 <template>
   <div id="songs" :class="{ nocolumns: !columns, columns: columns }">
-    <div class="song" v-for="song in songs" :key="song.title">
+    <div class="song" v-for="song in current_songs" :key="song.title">
       <h3 class="title">{{ song.title | cleantitle }}</h3>
       <div v-if="showchords">
         <div
@@ -75,6 +75,10 @@
         <div class="ccli" v-if="song.ccli">#{{ song.ccli }}</div>
       </div>
     </div>
+    <div id="nav-buttons">
+      <button class="prev" @click="prev">←</button>
+      <button class="next" @click="next">→</button>
+    </div>
   </div>
 </template>
 
@@ -100,13 +104,14 @@ export default Vue.extend({
   props: ["songs"],
   data() {
     return {
-      current_songs: this.songs || [],
       show_alert: false,
+      showall: false,
       showchords: true,
       showcomments: true,
-      columns: 0,
+      columns: 4,
       nashville: false,
-      metronome_playing: false
+      metronome_playing: false,
+      current_song_index: 1
     };
   },
   filters: {
@@ -131,6 +136,24 @@ export default Vue.extend({
     niceTime: function(i) {
       const d = new Date(i);
       return `${d.toDateString()}`;
+    }
+  },
+  computed: {
+    current_song: function() {
+      if (this.songs === false || this.songs === null) {
+        return {};
+      }
+      if (this.current_song_index === null || this.showall) {
+        return {};
+      } else return this.songs[this.current_song_index];
+    },
+    current_songs: function() {
+      if (this.songs === false || this.songs === null) {
+        return [];
+      }
+      if (this.current_song_index === null || this.showall) {
+        return this.songs;
+      } else return [this.songs[this.current_song_index]];
     }
   },
   methods: {
@@ -311,7 +334,76 @@ export default Vue.extend({
         html += `<div class="chord">${chordline}</div>`;
       }
       return html;
+    },
+    prev() {
+      window.scrollTo(0, 0);
+      this.showall = false;
+      const next_song =
+        this.current_song_index == null
+          ? this.songs.length - 1
+          : (this.current_song_index + this.songs.length - 1) %
+            this.songs.length;
+      this.selectSong(next_song);
+    },
+    next() {
+      window.scrollTo(0, 0);
+      this.showall = false;
+      const next_song =
+        this.current_song_index == null
+          ? 1
+          : (this.current_song_index + 1) % this.songs.length;
+      this.selectSong(next_song);
+    },
+    selectSong(n) {
+      if (n < 0) n = 0;
+      if (n < this.songs.length) {
+        this.current_song_index = n;
+        // this.renotify();
+      }
     }
+  },
+  created() {
+    window.addEventListener("keydown", e => {
+      // ignore during development
+      if (window.devel) return;
+
+      // ignore repeated keys
+      if (e.repeat) return;
+
+      switch (e.code) {
+        // case " ":
+        // keyCode 32
+        case "ArrowRight":
+          // keyCode 39
+          this.next();
+          e.preventDefault(); // don't scroll the screen on arrow key or space
+          break;
+        case "ArrowLeft":
+          // keyCode 37
+          this.prev();
+          e.preventDefault(); // don't scroll the screen on arrow key
+          break;
+        case "KeyM":
+          // keyCode 77
+          this.toggle_metronome();
+          break;
+        case "KeyN":
+          this.nashville = !this.nashville;
+          this.renotify();
+          break;
+        case "Minus":
+          break;
+        case "Equal":
+          break;
+        default:
+          // numbers from 1-0
+          if (e.keyCode >= 48 && e.keyCode <= 57) {
+            let song_index = e.keyCode - 48 - 1; // 1 selects song 0, 0 should select song 10
+            if (song_index < 0) song_index = 10;
+            this.selectSong(song_index);
+          }
+      }
+    });
   }
 });
 </script>
@@ -448,5 +540,25 @@ export default Vue.extend({
 .lyrics.nochords .chord-group .lyric {
   margin-top: -2px;
   white-space: normal;
+}
+
+#nav-buttons button {
+  cursor: pointer;
+  font-size: 50px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.1);
+  background: none;
+  border: none;
+  outline: none;
+}
+#nav-buttons button.prev {
+  position: fixed;
+  left: 0;
+  top: 50%;
+}
+#nav-buttons button.next {
+  position: fixed;
+  right: 0;
+  top: 50%;
 }
 </style>
