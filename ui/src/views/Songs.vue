@@ -108,7 +108,7 @@ export default Vue.extend({
       showall: false,
       showchords: true,
       showcomments: true,
-      columns: 4,
+      columns: 0,
       nashville: false,
       metronome_playing: false,
       current_song_index: 1
