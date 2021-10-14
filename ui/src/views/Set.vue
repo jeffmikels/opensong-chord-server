@@ -8,6 +8,13 @@
 import Vue from "vue";
 import axios from "axios";
 import Songs from "./Songs.vue";
+import type { Set } from "../types";
+
+declare interface BaseComponentData {
+  path?: string,
+  current_set?: Set,
+  current_song_index?: number
+}
 
 export default Vue.extend({
   name: "Set",
@@ -15,17 +22,21 @@ export default Vue.extend({
     Songs
   },
   mounted() {
-    this.path = this.$route.query.path;
+    if (this.$route.query.path !== null) {
+      this.path = this.$route.query.path as string;
+    }
     this.getSet();
     this.$root.$data.appBar.title = "View Set";
   },
-  data: () => ({
-    path: null,
-    current_set: null,
-    current_song_index: null
-  }),
+  data(): BaseComponentData {
+    return {
+      path: undefined,
+      current_set: undefined,
+      current_song_index: undefined
+    };
+  },
   methods: {
-    getSet(setPath, songIndex = 0) {
+    getSet(songIndex = 0): void {
       const url = `${this.$endpoint}/${this.path}`;
       axios
         .get(url)
@@ -44,15 +55,15 @@ export default Vue.extend({
 
             let id = `${res.data.path}-${i}-${song.path}-transpose`;
             let t = localStorage.getItem(id);
-            if (t !== null) song.transpose = 1 * t;
+            if (t !== null) song.transpose = 1 * parseInt(t);
 
             id = `${res.data.path}-${i}-${song.path}-capo`;
             t = localStorage.getItem(id);
-            if (t !== null) song.capo = 1 * t;
+            if (t !== null) song.capo = 1 * parseInt(t);
 
             id = `${res.data.path}-${i}-${song.path}-bpm`;
             t = localStorage.getItem(id);
-            if (t !== null) song.bpm = 1 * t;
+            if (t !== null) song.bpm = 1 * parseInt(t);
           }
 
           this.current_set = res.data;
@@ -65,7 +76,8 @@ export default Vue.extend({
           console.log(err);
         });
     },
-    song(index) {
+    song(index: number) {
+      if (!this.current_set) return;
       return this.current_set.songs[index];
     }
   }
