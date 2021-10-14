@@ -179,7 +179,7 @@ export default Vue.extend({
 
         // replace all source chords with target chords
         let m;
-        const transposed = [];
+        const transposed: string[] = [];
         for (const line of lines) {
           let transposed_line = "";
           if (line.search(/^\./) === -1) {
@@ -364,9 +364,6 @@ export default Vue.extend({
   },
   created() {
     window.addEventListener("keydown", e => {
-      // ignore during development
-      if (window.devel) return;
-
       // ignore repeated keys
       if (e.repeat) return;
 
