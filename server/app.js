@@ -119,7 +119,7 @@ app.listen( LISTEN_PORT );
 /Songs           => serves list of Songs [ BROKEN ]
 
 QUERY VARIABLES
-?usecache=1      => will use the most recently cached data for a request
+?ignorecache=1   => will bypass the recently cached data for a request
 ?filter=a,b,...  => will filter the results, multiple filters with comma (applied in order)
 
 SONG FILTERS:
@@ -204,7 +204,8 @@ async function handler( req, res ) {
 	}
 
 	try {
-		let data
+		let data;
+		let ignorecache = query.ignorecache != null && query.ignorecache;
 
 		// TWO SPECIAL REWRITES ARE AVAILABLE :: --today-- and --latest--
 
@@ -224,7 +225,7 @@ async function handler( req, res ) {
 		// note, since this requires two requests it has caching problems
 		// if usecache is set, it will attempt to use the cache for each request
 		if ( path == 'Sets/--latest--' ) {
-			let setsdata = await getPathFromBackend( 'Sets', query.useCache );
+			let setsdata = await getPathFromBackend( 'Sets', ignorecache );
 			if ( setsdata.code == 200 ) {
 				path = setsdata.data.files[ 0 ].path;
 			} else {
@@ -234,7 +235,7 @@ async function handler( req, res ) {
 			Log( 'REWRITE Sets/--latest-- TO: ' + path )
 		}
 
-		data = await getPathFromBackend( path, query.useCache );
+		data = await getPathFromBackend( path, ignorecache );
 		if ( query.filter ) data.data = dataFilter( data.data, query.filter );
 
 		res.writeHead( data.code );
@@ -337,12 +338,22 @@ function dataFilter( data, filters ) {
 }
 
 // should return an object with {code, data, err}
-async function getPathFromBackend( path, useCache = false ) {
+async function getPathFromBackend( path, ignoreCache = false, andTrigger = true ) {
 
 	// path can be a named set, a named song, 'Songs', or 'Sets'
-	Log( `Attempting to get file for ${path}` );
-	if ( useCache && path in cache ) return { code: 200, data: JSON.parse( cache[ path ] ), err: null };
+	if ( !ignoreCache && path in cache ) {
+		if ( andTrigger ) {
+			// trigger a cache reprime, but don't wait for it to finish
+			Log( `Serving ${path} from cache, but triggering refresh too.` );
+			getPathFromBackend( path, ignoreCache = true );
+		} else {
+			Log( `Serving ${path} from cache; NOT triggering refresh too.` );
+		}
 
+		return { code: 200, data: JSON.parse( cache[ path ] ), err: null }
+	};
+
+	Log( `Loading ${path} from the backend.` );
 	let { code, data, err } = await backend.handlePath( path );
 	if ( err ) {
 		return { code, data, err };

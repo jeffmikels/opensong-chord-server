@@ -1,1 +1,17 @@
-{}
+{
+  "name": "worshipchords",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "serve": "node server/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.4",
+    "webdav": "^3.6.1",
+    "ws": "^7.1.0"
+  }
+}

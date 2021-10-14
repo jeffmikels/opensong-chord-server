@@ -304,7 +304,8 @@ class PlanningCenter {
 		let files = [];
 		let plans = await this.findPlans( {} );
 		for ( let plan of plans ) {
-			if ( plan.attributes.items_count == 0 ) continue;
+			if ( plan.items == null || plan.items.length == 0 ) continue;
+			// console.dir( plan, { depth: 10 } );
 
 			let dirpath = `Sets/${plan.relationships.service_type.data.id}`
 			let filepath = `${dirpath}/${plan.id}`
