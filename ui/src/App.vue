@@ -13,14 +13,12 @@
       </v-app-bar-title>
       <v-spacer></v-spacer>
 
-      <v-btn
-        href="https://github.com/vuetifyjs/vuetify/releases/latest"
-        target="_blank"
-        text
-      >
-        <span class="mr-2">Latest Release</span>
-        <v-icon>mdi-open-in-new</v-icon>
-      </v-btn>
+      <div v-for="button in this.$root.$data.appBar.buttons" :key="button.icon">
+        <v-btn @click="button.callback" text>
+          <v-icon v-if="button.icon">{{button.icon}}</v-icon>
+          <span class="mr-2" v-if="button.label">{{button.label}}</span>
+        </v-btn>
+      </div>
     </v-app-bar>
 
     <v-navigation-drawer v-model="drawer" app temporary>
@@ -60,6 +58,7 @@ export default Vue.extend({
     $route(to, from) {
       this.$root.$data.appBar.title = null;
       this.$root.$data.appBar.subtitle = null;
+      this.$root.$data.appBar.buttons = [];
     }
   }
 });
