@@ -104,8 +104,16 @@
             </v-btn>
           </v-col>
           <v-col>
-            <v-btn @click="nashville = !nashville" elevation="2" color="orange" :outlined="!nashville">
+            <v-btn @click="nashville = !nashville" elevation="2" color="orange" :outlined="!nashville" block>
               <v-icon left>mdi-pound-box</v-icon> Nashville
+            </v-btn>
+            <br>
+            <v-btn @click="showchords = !showchords" elevation="2" color="orange" :outlined="!showchords" block>
+              <v-icon left>mdi-music-note</v-icon> Chords
+            </v-btn>
+            <br>
+            <v-btn @click="showcomments = !showcomments" elevation="2" color="orange" :outlined="!showcomments" block>
+              <v-icon left>mdi-information</v-icon> Comments
             </v-btn>
           </v-col>
         </v-row>
