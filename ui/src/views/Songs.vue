@@ -1,4 +1,5 @@
 <template>
+  <div>
   <div id="songs" :class="{ nocolumns: !columns, columns: columns }">
     <div class="song" v-for="song in current_songs" :key="song.title">
       <h3 class="title">{{ song.title | cleantitle }}</h3>
@@ -33,21 +34,6 @@
           <!-- <span v-if="song.transpose > 0"></span> -->
         </div>
         <div v-if="song.key" class="chordbuttons">
-          <button class="transposebutton" @click="transpose(song, -1)">
-            &#8722;
-          </button>
-          <button class="transposebutton" @click="transpose(song, 1)">
-            ＋
-          </button>
-          <button
-            class="nashvillebutton"
-            :class="{ active: nashville }"
-            @click="nashville = !nashville"
-          >
-            #
-          </button>
-          <button class="capobutton" @click="capo(song, -1)">&#8722;</button>
-          <button class="capobutton" @click="capo(song, 1)">＋</button>
           <button
             class="metronomebutton"
             :class="{ active: metronome_playing }"
@@ -80,6 +66,61 @@
       <button class="next" @click="next">→</button>
     </div>
   </div>
+  <v-bottom-sheet hide-overlay v-model="show_function_sheet">
+    <v-sheet
+      class="text-center"
+      height="200px"
+    >
+      <v-container>
+        <v-row>
+          <v-col>
+            <div class="text-h6">
+              Key
+              <v-chip label small color="cyan" class="ma-2">{{ current_song | transposed_key }}
+              <small v-if="current_song.transpose > 0" style="padding-left: 4px;">({{ current_song.transpose | nice_transpose }}) </small>
+            </v-chip>
+            </div>
+            <v-btn @click="transpose(current_song, 1)" elevation="2" class="ma-2" color="cyan">
+              Key <v-icon right>mdi-arrow-up-bold</v-icon>
+            </v-btn>
+            <br />
+            <v-btn @click="transpose(current_song, -1)" elevation="2" class="ma-2" color="cyan">
+              Key <v-icon right>mdi-arrow-down-bold</v-icon>
+            </v-btn>
+          </v-col>
+          <v-col>
+            <div class="text-h6">Capo
+              <v-chip label small color="pink" class="ma-2" v-if="current_song.capo > 0">
+              {{ current_song | capo_key }}
+              ({{ current_song.capo }})
+            </v-chip>
+            </div>
+            <v-btn @click="capo(current_song, 1)" elevation="2" class="ma-2" color="pink">
+              Capo <v-icon right>mdi-arrow-up-bold</v-icon>
+            </v-btn>
+            <br />
+            <v-btn @click="capo(current_song, -1)" elevation="2" class="ma-2" color="pink">
+              Capo <v-icon right>mdi-arrow-down-bold</v-icon>
+            </v-btn>
+          </v-col>
+          <v-col>
+            <v-btn @click="nashville = !nashville" elevation="2" color="orange" :outlined="!nashville" block>
+              <v-icon left>mdi-pound-box</v-icon> Nashville
+            </v-btn>
+            <br>
+            <v-btn @click="showchords = !showchords" elevation="2" color="orange" :outlined="!showchords" block>
+              <v-icon left>mdi-music-note</v-icon> Chords
+            </v-btn>
+            <br>
+            <v-btn @click="showcomments = !showcomments" elevation="2" color="orange" :outlined="!showcomments" block>
+              <v-icon left>mdi-information</v-icon> Comments
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-sheet>
+  </v-bottom-sheet>
+  </div>
 </template>
 
 <script lang="ts">
@@ -111,7 +152,8 @@ export default Vue.extend({
       columns: 0,
       nashville: false,
       metronome_playing: false,
-      current_song_index: 1
+      current_song_index: 1,
+      show_function_sheet: false
     };
   },
   filters: {
@@ -136,7 +178,11 @@ export default Vue.extend({
     niceTime: function(i) {
       const d = new Date(i);
       return `${d.toDateString()}`;
-    }
+    },
+    nice_transpose: function(num) {
+      if (num <= 6) return `+${num}`;
+      else return `-${12 - num}`;
+    },
   },
   computed: {
     current_song: function() {
@@ -354,6 +400,25 @@ export default Vue.extend({
           : (this.current_song_index + 1) % this.songs.length;
       this.selectSong(next_song);
     },
+    transpose(song, inc) {
+      if (!song.transpose) song.transpose = 0;
+      song.transpose = (24 + inc + song.transpose) % 12; // ensure we mod positive numbers
+      console.log(song);
+      // this.save();
+    },
+    capo(song, inc) {
+      if (!song.capo) song.capo = 0;
+      song.capo = (24 + inc + song.capo) % 12; // ensure we mod positive numbers
+      console.log(song);
+      // this.save();
+    },
+    bpm(song, inc) {
+      if (!song.bpm) song.bpm = 140;
+      song.bpm = inc + song.bpm;
+      // bpm = song.bpm; // change the global bpm too
+      console.log(song);
+      // this.save();
+    },
     selectSong(n) {
       if (n < 0) n = 0;
       if (n < this.songs.length) {
@@ -401,6 +466,13 @@ export default Vue.extend({
           }
       }
     });
+    this.$root.$data.appBar.buttons = [{
+      icon: "mdi-cog-box",
+      label: false,
+      callback: () => {
+        this.show_function_sheet = !this.show_function_sheet;
+      }
+    }];
   }
 });
 </script>
