@@ -15,8 +15,8 @@
 
       <div v-for="button in this.$root.$data.appBar.buttons" :key="button.icon">
         <v-btn @click="button.callback" text>
-          <v-icon v-if="button.icon">{{button.icon}}</v-icon>
-          <span class="mr-2" v-if="button.label">{{button.label}}</span>
+          <v-icon v-if="button.icon">{{ button.icon }}</v-icon>
+          <span class="mr-2" v-if="button.label">{{ button.label }}</span>
         </v-btn>
       </div>
     </v-app-bar>
@@ -70,5 +70,19 @@ Vue.prototype.$endpoint = "http://localhost:8083";
   font-weight: lighter;
   font-size: 0.7em;
   line-height: 1em;
+}
+
+/*scrollbar*/
+#app {
+  scrollbar-width: none;
+} /*firefox*/
+
+::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
 }
 </style>

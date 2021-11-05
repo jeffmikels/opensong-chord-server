@@ -1,134 +1,224 @@
 <template>
   <div>
-  <div id="songs" :class="{ nocolumns: !columns, columns: columns }">
-    <div class="song" v-for="song in current_songs" :key="song.title">
-      <h3 class="title">{{ song.title | cleantitle }}</h3>
-      <div v-if="showchords">
-        <div
-          id="alert"
-          v-if="
-            show_alert && (song.capo || nashville) && current_song_index != null
-          "
-        >
-          <span v-if="song.key"
-            >&nbsp;[ KEY: {{ song | transposed_key }} ]&nbsp;</span
+    <div id="songs" :class="{ nocolumns: columns === 1, columns: columns > 1 }">
+      <div class="song" v-for="song in current_songs" :key="song.title">
+        <h3 class="title">{{ song.title | cleantitle }}</h3>
+        <div v-if="showchords">
+          <div
+            id="alert"
+            v-if="
+              show_alert &&
+                (song.capo || nashville) &&
+                current_song_index != null
+            "
           >
-          <span v-if="song.capo > 0"
-            >&nbsp;[ CAPO: {{ song.capo }} ]&nbsp;</span
-          >
-          <!-- <span v-if="song.bpm">&nbsp;[ BPM: {{song.bpm}} ]&nbsp;</span> -->
-        </div>
+            <span v-if="song.key"
+              >&nbsp;[ KEY: {{ song | transposed_key }} ]&nbsp;</span
+            >
+            <span v-if="song.capo > 0"
+              >&nbsp;[ CAPO: {{ song.capo }} ]&nbsp;</span
+            >
+            <!-- <span v-if="song.bpm">&nbsp;[ BPM: {{song.bpm}} ]&nbsp;</span> -->
+          </div>
 
-        <div class="songmeta">
-          <span v-if="song.key"
-            >[ KEY: {{ song | transposed_key }}
-            <small v-if="song.transpose > 0"
-              >({{ song.transpose | nice_transpose }}) </small
-            >]</span
-          >
-          <span v-if="song.capo"
-            >[ CAPO: {{ song | capo_key }}
-            <small v-if="song.capo > 0">({{ song.capo }}) </small>]</span
-          >
-          <span v-if="song.bpm">[ BPM: {{ song.bpm }} ]</span>
-          <!-- <span v-if="song.transpose > 0"></span> -->
+          <div class="songmeta">
+            <span v-if="song.key"
+              >[ KEY: {{ song | transposed_key }}
+              <small v-if="song.transpose > 0"
+                >({{ song.transpose | nice_transpose }}) </small
+              >]</span
+            >
+            <span v-if="song.capo"
+              >[ CAPO: {{ song | capo_key }}
+              <small v-if="song.capo > 0">({{ song.capo }}) </small>]</span
+            >
+            <span v-if="song.bpm">[ BPM: {{ song.bpm }} ]</span>
+            <!-- <span v-if="song.transpose > 0"></span> -->
+          </div>
+          <!-- <div v-if="song.key" class="chordbuttons">
+            <button
+              class="metronomebutton"
+              :class="{ active: metronome_playing }"
+              @click="toggle_metronome(song)"
+            >
+              M
+            </button>
+            <button class="bpmbutton" @click="bpm(song, -1)">&#8722;</button>
+            <button class="bpmbutton" @click="bpm(song, 1)">＋</button>
+          </div> -->
         </div>
-        <div v-if="song.key" class="chordbuttons">
-          <button
-            class="metronomebutton"
-            :class="{ active: metronome_playing }"
-            @click="toggle_metronome(song)"
-          >
-            M
-          </button>
-          <button class="bpmbutton" @click="bpm(song, -1)">&#8722;</button>
-          <button class="bpmbutton" @click="bpm(song, 1)">＋</button>
+        <div
+          class="lyrics"
+          :class="{ nochords: !showchords, nocomments: !showcomments }"
+          v-html="lyric_html(song)"
+        ></div>
+        <div
+          class="abc"
+          v-html="abc_svg(song)"
+          v-if="song.abc && showchords"
+        ></div>
+        <div class="legal">
+          <div class="author">{{ song.author }}</div>
+          <div class="copyright">{{ song.copyright }}</div>
+          <div class="ccli" v-if="song.ccli">#{{ song.ccli }}</div>
         </div>
       </div>
-      <div
-        class="lyrics"
-        :class="{ nochords: !showchords, nocomments: !showcomments }"
-        v-html="lyric_html(song)"
-      ></div>
-      <div
-        class="abc"
-        v-html="abc_svg(song)"
-        v-if="song.abc && showchords"
-      ></div>
-      <div class="legal">
-        <div class="author">{{ song.author }}</div>
-        <div class="copyright">{{ song.copyright }}</div>
-        <div class="ccli" v-if="song.ccli">#{{ song.ccli }}</div>
+      <div id="nav-buttons">
+        <button class="prev" @click="prev">←</button>
+        <button class="next" @click="next">→</button>
       </div>
     </div>
-    <div id="nav-buttons">
-      <button class="prev" @click="prev">←</button>
-      <button class="next" @click="next">→</button>
-    </div>
-  </div>
-  <v-bottom-sheet hide-overlay v-model="show_function_sheet">
-    <v-sheet
-      class="text-center"
-      height="200px"
-    >
-      <v-container>
-        <v-row>
-          <v-col>
-            <div class="text-h6">
-              Key
-              <v-chip label small color="cyan" class="ma-2">{{ current_song | transposed_key }}
-              <small v-if="current_song.transpose > 0" style="padding-left: 4px;">({{ current_song.transpose | nice_transpose }}) </small>
-            </v-chip>
-            </div>
-            <v-btn @click="transpose(current_song, 1)" elevation="2" class="ma-2" color="cyan">
-              Key <v-icon right>mdi-arrow-up-bold</v-icon>
-            </v-btn>
-            <br />
-            <v-btn @click="transpose(current_song, -1)" elevation="2" class="ma-2" color="cyan">
-              Key <v-icon right>mdi-arrow-down-bold</v-icon>
-            </v-btn>
-          </v-col>
-          <v-col>
-            <div class="text-h6">Capo
-              <v-chip label small color="pink" class="ma-2" v-if="current_song.capo > 0">
-              {{ current_song | capo_key }}
-              ({{ current_song.capo }})
-            </v-chip>
-            </div>
-            <v-btn @click="capo(current_song, 1)" elevation="2" class="ma-2" color="pink">
-              Capo <v-icon right>mdi-arrow-up-bold</v-icon>
-            </v-btn>
-            <br />
-            <v-btn @click="capo(current_song, -1)" elevation="2" class="ma-2" color="pink">
-              Capo <v-icon right>mdi-arrow-down-bold</v-icon>
-            </v-btn>
-          </v-col>
-          <v-col>
-            <v-btn @click="nashville = !nashville" elevation="2" color="orange" :outlined="!nashville" block>
-              <v-icon left>mdi-pound-box</v-icon> Nashville
-            </v-btn>
-            <br>
-            <v-btn @click="showchords = !showchords" elevation="2" color="orange" :outlined="!showchords" block>
-              <v-icon left>mdi-music-note</v-icon> Chords
-            </v-btn>
-            <br>
-            <v-btn @click="showcomments = !showcomments" elevation="2" color="orange" :outlined="!showcomments" block>
-              <v-icon left>mdi-information</v-icon> Comments
-            </v-btn>
-          </v-col>
-        </v-row>
-      </v-container>
-    </v-sheet>
-  </v-bottom-sheet>
+    <v-bottom-sheet hide-overlay v-model="show_function_sheet">
+      <v-sheet class="text-center" height="200px">
+        <v-container>
+          <v-row>
+            <v-col>
+              <div class="text-h6">
+                Key
+                <v-chip label small color="cyan" class="ma-2"
+                  >{{ current_song | transposed_key }}
+                  <small
+                    v-if="current_song.transpose > 0"
+                    style="padding-left: 4px;"
+                    >({{ current_song.transpose | nice_transpose }})
+                  </small>
+                </v-chip>
+              </div>
+              <v-btn
+                @click="transpose(current_song, 1)"
+                elevation="2"
+                class="ma-2"
+                color="cyan"
+              >
+                Key <v-icon right>mdi-arrow-up-bold</v-icon>
+              </v-btn>
+              <br />
+              <v-btn
+                @click="transpose(current_song, -1)"
+                elevation="2"
+                class="ma-2"
+                color="cyan"
+              >
+                Key <v-icon right>mdi-arrow-down-bold</v-icon>
+              </v-btn>
+            </v-col>
+            <v-col>
+              <div class="text-h6">
+                Capo
+                <v-chip
+                  label
+                  small
+                  color="pink"
+                  class="ma-2"
+                  zv-if="current_song.capo > 0"
+                >
+                  {{ current_song | capo_key }}
+                  ({{ current_song.capo }})
+                </v-chip>
+              </div>
+              <v-btn
+                @click="capo(current_song, 1)"
+                elevation="2"
+                class="ma-2"
+                color="pink"
+              >
+                Capo <v-icon right>mdi-arrow-up-bold</v-icon>
+              </v-btn>
+              <br />
+              <v-btn
+                @click="capo(current_song, -1)"
+                elevation="2"
+                class="ma-2"
+                color="pink"
+              >
+                Capo <v-icon right>mdi-arrow-down-bold</v-icon>
+              </v-btn>
+            </v-col>
+            <v-col>
+              <div class="text-h6">
+                Columns
+                <v-chip label small color="indigo" class="ma-2">
+                  {{ columns }}
+                </v-chip>
+              </div>
+              <v-btn
+                @click="setColumns(1)"
+                elevation="2"
+                class="ma-2"
+                color="indigo"
+                >1</v-btn
+              >
+              <v-btn
+                @click="setColumns(2)"
+                elevation="2"
+                class="ma-2"
+                color="indigo"
+                >2</v-btn
+              >
+              <v-btn
+                @click="setColumns(3)"
+                elevation="2"
+                class="ma-2"
+                color="indigo"
+                >3</v-btn
+              >
+              <v-btn
+                @click="setColumns(4)"
+                elevation="2"
+                class="ma-2"
+                color="indigo"
+                >4</v-btn
+              >
+            </v-col>
+            <v-col>
+              <v-btn
+                @click="nashville = !nashville"
+                elevation="2"
+                color="orange"
+                :outlined="!nashville"
+                block
+              >
+                <v-icon left>mdi-pound-box</v-icon> Nashville
+              </v-btn>
+              <br />
+              <v-btn
+                @click="showchords = !showchords"
+                elevation="2"
+                color="orange"
+                :outlined="!showchords"
+                block
+              >
+                <v-icon left>mdi-music-note</v-icon> Chords
+              </v-btn>
+              <br />
+              <v-btn
+                @click="showcomments = !showcomments"
+                elevation="2"
+                color="orange"
+                :outlined="!showcomments"
+                block
+              >
+                <v-icon left>mdi-information</v-icon> Comments
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-sheet>
+    </v-bottom-sheet>
   </div>
 </template>
 
 <script lang="ts">
 import Vue from "vue";
 
+/* eslint-disable */
+const { renderAbc } = require("abcjs");
+
 const chordletters = "A A# B C C# D D# E F F# G G# A Bb B C Db D Eb E F Gb G Ab".split(
   " "
 );
+
+// scale_colors aren't needed?
 // const scale_colors = ["", "m", "m", "", "", "m", "dim"];
 const semitones_to_nashville = {
   0: 1,
@@ -140,7 +230,7 @@ const semitones_to_nashville = {
   11: 7
 };
 
-export default Vue.extend({
+const app = Vue.extend({
   name: "Song",
   props: ["songs"],
   data() {
@@ -149,7 +239,7 @@ export default Vue.extend({
       showall: false,
       showchords: true,
       showcomments: true,
-      columns: 0,
+      columns: 1,
       nashville: false,
       metronome_playing: false,
       current_song_index: 1,
@@ -182,7 +272,7 @@ export default Vue.extend({
     nice_transpose: function(num) {
       if (num <= 6) return `+${num}`;
       else return `-${12 - num}`;
-    },
+    }
   },
   computed: {
     current_song: function() {
@@ -425,9 +515,43 @@ export default Vue.extend({
         this.current_song_index = n;
         // this.renotify();
       }
+    },
+    setColumns(n) {
+      this.columns = n;
+      this.updateColumns();
+    },
+    fontUp() {
+      // this.fontSize = (this.fontSize * 1.2) << 0;
+      this.fontSize++;
+    },
+    fontDown() {
+      // this.fontSize = (this.fontSize * 0.9) << 0;
+      this.fontSize--;
+    },
+    abc_svg(song) {
+      if (song.abc !== "") return render_abc(song.abc);
+      return "";
+    },
+    updateColumns() {
+      console.log("doing resize");
+      let el = document.getElementById("songs");
+      if (el) {
+        document.body.style.height = "1px";
+        if (this.columns === 1) {
+          el.style.height = "";
+          el.style.columnWidth = "";
+        } else {
+          el.style.height = `${window.innerHeight - 48}px`;
+          const colwidth = window.innerWidth / (this.columns + 0.5);
+          el.style.columnWidth = `${colwidth}px`;
+        }
+      }
+      // change the maximum value of the metronome dot
+      // dot_max = window.innerWidth - dot_width;
     }
   },
   created() {
+    window.addEventListener("resize", _ => this.updateColumns());
     window.addEventListener("keydown", e => {
       // ignore repeated keys
       if (e.repeat) return;
@@ -466,15 +590,87 @@ export default Vue.extend({
           }
       }
     });
-    this.$root.$data.appBar.buttons = [{
-      icon: "mdi-cog-box",
-      label: false,
-      callback: () => {
-        this.show_function_sheet = !this.show_function_sheet;
+    this.$root.$data.appBar.buttons = [
+      {
+        icon: "mdi-cog-box",
+        label: false,
+        callback: () => {
+          this.show_function_sheet = !this.show_function_sheet;
+        }
       }
-    }];
+    ];
   }
 });
+
+/* SETUP ABC CONVERSION */
+/* ** TRYING TO USE abc2svg ** */
+// var abc, svg_accumulator, syms;
+// var abc_options = {
+//   read_file: function(fn) {},
+//   errbld: function(){},
+//   img_out: function(str) {
+//     svg_accumulator += str
+//   },
+//   anno_stop: function(type, start, stop, x, y, w, h, s) {
+//     if (["beam", "slur", "tuplet"].indexOf(type) >= 0)
+//       return
+//     syms[start] = s
+//     abc.out_svg('<rect class="abcr _' + start + '_" x="');
+//     abc.out_sxsy(x, '" y="', y);
+//     abc.out_svg('" width="' + w.toFixed(2) + '" height="' + abc.sh(h).toFixed(2) + '"/>\n')
+//   },
+//   page_format: true
+// }
+// abc = new abc2svg.Abc(abc_options);
+// function render_abc(content) {
+//   // until this actually works, we just output raw text
+//   return '<abc>' + content + '</abc>';
+//
+//   syms = []
+//   svg_accumulator = '';
+//   // abc.tosvg('edit', '%%fullsvg x\n%%pagewidth 12cm\n%%bgcolor white\n%%topspace 0\n%%composerspace 0\n%%leftmargin 0.2cm\n%%rightmargin 0.2cm');
+//   try {
+//     let header = '%%fullsvg x\n%%pagewidth 12cm\n%%bgcolor white\n%%topspace 0\n%%composerspace 0\n%%leftmargin 0.2cm\n%%rightmargin 0.2cm\n'
+//     abc.tosvg('noname.abc', header + content)
+//   } catch (e) {
+//     alert(e.message + '\nabc2svg tosvg bug - stack:\n' + e.stack)
+//     return
+//   }
+//   return svg_accumulator;
+// }
+
+// USING ABCJS
+function render_abc(content) {
+  var html = "";
+  try {
+    // to render multiple tunes, we have multiple objects
+    const els: HTMLDivElement[] = [];
+    const midiels: HTMLDivElement[] = [];
+    for (let i = 0; i < 10; i++) {
+      els.push(document.createElement("div"));
+      midiels.push(document.createElement("div"));
+    }
+    // until this actually works, we just output raw text
+    // return '<abc>' + content + '</abc>';
+    renderAbc(els, content, {
+      scale: 0.8,
+      staffwidth: 350,
+      paddingtop: 0,
+      paddingbottom: 0,
+      paddingright: 0,
+      paddingleft: 0
+      // responsive: "resize",
+    });
+    // ABCJS.renderMidi(midiels, content);
+    for (const el of els) html += el.innerHTML;
+    for (const el of midiels) html += el.innerHTML;
+  } catch (e) {
+    html = `<pre>${content}</pre>`;
+  }
+  return html;
+}
+
+export default app;
 </script>
 
 <style>
@@ -489,6 +685,7 @@ export default Vue.extend({
   column-fill: auto;
   column-gap: 10px;
   /*height:5000px;*/
+  overflow-x: scroll;
 }
 #songs.nocolumns {
   columns: initial !important;

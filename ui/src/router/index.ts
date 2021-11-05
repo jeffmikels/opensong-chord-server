@@ -8,7 +8,8 @@ const routes: Array<RouteConfig> = [
   {
     path: '/',
     name: 'Home',
-    component: Home
+    redirect: '/sets',
+    // component: Home
   },
   {
     path: '/sets',
